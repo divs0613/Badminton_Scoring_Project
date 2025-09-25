@@ -1,6 +1,6 @@
 /*
     Project Name: Badminton Scoring Program
-    Group Number: 2
+    Group Number: 4
     Group Members:
     - Garduque, Divine Grace G.
     - Kalaw, Zoe Ulrik L.
@@ -453,10 +453,10 @@ int main() {
         }
         catch (const exception& e) {
             cout << "An unexpected error occurred: " << e.what() << endl;
-            cout << "Restarting program..." << endl;
+            cout << "Restarting program....." << endl;
         }
     }
     
-    cout << "\nThank you for playing! Goodbye!" << endl;
+    cout << "\nThank you for playing!" << endl;
     return 0;
 }
