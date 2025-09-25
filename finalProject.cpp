@@ -1,6 +1,6 @@
 /*
     Project Name: Badminton Scoring Program
-    Group Number: 4
+    Group Number: 2
     Group Members:
     - Garduque, Divine Grace G.
     - Kalaw, Zoe Ulrik L.
