@@ -19,47 +19,52 @@ BadmintonMatch Class - Function List
 2. void setupGame()  
    - Asks if Singles or Doubles, reads names, sets up the match.
 
-3. void updateServer()  
+3. void coinToss()
+   - Performs a coin toss to determine which side serves first.
+
+4. void updateServer()  
    - Updates the current server depending on score and format.
 
-4. void scorePoint(bool teamAScores)  
+5. void scorePoint(bool teamAScores)  
    - Awards points, updates service, displays score, and checks set win.
 
-5. void checkSetWin()  
+6. void checkSetWin()  
    - Checks if a set is won, updates set scores, increments setsWon.
 
-6. void checkMatchWin()  
+7. void checkMatchWin()  
    - Checks if the match is won (best of 3 sets).
 
-7. void displayCurrentScore()  
+8. void displayCurrentScore()  
    - Prints the live score of the current set.
 
-8. void displayMatchStatus()  
+9. void displayMatchStatus()  
    - Displays sets won, scores from past sets, and current server.
 
-9. void displayFinalScore()  
-   - Shows final results after the match ends.
+10. void displayFinalScore()  
+    - Shows final results after the match ends.
 
-10. void playMatch()  
+11. void playMatch()  
     - Game loop: keeps asking who scores until someone wins 2 sets.
 
-11. bool askPlayAgain()  
+12. bool askPlayAgain()  
     - Asks the user if they want to play another match (y/n).
 
-12. void resetMatch()  
+13. void resetMatch()  
     - Resets all match data to start fresh for a new game.
 
 ----------------------------------------
 Global (outside class):
 ----------------------------------------
 
-13. int main()  
+14. int main()  
     - Entry point. Runs matches in a loop until the user chooses not to play again.
 */
 
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
@@ -85,6 +90,10 @@ private:
     bool serviceA; // true if A serves, false if B serves
     string currentServer;
     
+    // Doubles rotation tracking
+    int serverIndexA; // 0 or 1 for teamA
+    int serverIndexB; // 0 or 1 for teamB
+    
 public:
     BadmintonMatch() {
         currentSetA = 0;
@@ -93,11 +102,57 @@ public:
         setsWonB = 0;
         currentSet = 1;
         serviceA = true;
+        serverIndexA = 0;
+        serverIndexB = 0;
         
         // Initialize set scores
         set1ScoreA = 0; set1ScoreB = 0;
         set2ScoreA = 0; set2ScoreB = 0;
         set3ScoreA = 0; set3ScoreB = 0;
+        
+        // Seed random number generator
+        srand(time(0));
+    }
+    
+    void coinToss() {
+        cout << "\n=== COIN TOSS ===" << endl;
+        cout << "Flipping coin to determine first server..." << endl;
+        cout << "Press Enter to flip the coin...";
+        cin.ignore();
+        cin.get();
+        
+        // Generate random number (0 or 1)
+        int tossResult = rand() % 2;
+        
+        cout << "\nCoin flipping..." << endl;
+        cout << "..." << endl;
+        
+        if (tossResult == 0) {
+            serviceA = true;
+            if (isSingles) {
+                currentServer = players[0];
+                cout << "\nResult: " << players[0] << " wins the toss and will serve first!" << endl;
+            } else {
+                currentServer = teamA[0];
+                serverIndexA = 0;
+                cout << "\nResult: Team A wins the toss and will serve first!" << endl;
+                cout << "First server: " << teamA[0] << endl;
+            }
+        } else {
+            serviceA = false;
+            if (isSingles) {
+                currentServer = players[1];
+                cout << "\nResult: " << players[1] << " wins the toss and will serve first!" << endl;
+            } else {
+                currentServer = teamB[0];
+                serverIndexB = 0;
+                cout << "\nResult: Team B wins the toss and will serve first!" << endl;
+                cout << "First server: " << teamB[0] << endl;
+            }
+        }
+        
+        cout << "\nPress Enter to start the match...";
+        cin.get();
     }
     
     void setupGame() {
@@ -120,7 +175,6 @@ public:
                 getline(cin, players[0]);
                 cout << "Enter Player B name: ";
                 getline(cin, players[1]);
-                currentServer = players[0];
             } else {
                 isSingles = false;
                 cout << "\nEnter Team A Player 1 name: ";
@@ -131,8 +185,10 @@ public:
                 getline(cin, teamB[0]);
                 cout << "Enter Team B Player 2 name: ";
                 getline(cin, teamB[1]);
-                currentServer = teamA[0];
             }
+            
+            // Perform coin toss to determine first server
+            coinToss();
             
             cout << "\n=== MATCH STARTING ===" << endl;
             displayMatchStatus();
@@ -157,14 +213,20 @@ public:
                 cout << currentServer << " serves from the " << side << " service court." << endl;
             }
         } else {
-            // Doubles: service alternates between players
-            cout << "Service: " << currentServer << endl;
+            // Doubles: serve from right if even, left if odd
+            if (serviceA) {
+                string side = (currentSetA % 2 == 0) ? "right" : "left";
+                cout << "Service: " << currentServer << " (Team A) serves from the " << side << " court." << endl;
+            } else {
+                string side = (currentSetB % 2 == 0) ? "right" : "left";
+                cout << "Service: " << currentServer << " (Team B) serves from the " << side << " court." << endl;
+            }
         }
     }
     
     void scorePoint(bool teamAScores) {
         if (teamAScores) {
-            currentSetA ++; // Increment by 1 point
+            currentSetA++; // Increment by 1 point
             cout << "\n1 Point to ";
             if (isSingles) {
                 cout << players[0];
@@ -173,18 +235,23 @@ public:
             }
             cout << "!" << endl;
             
-            // Service continues if serving side scores
+            // Service handling
             if (!serviceA) {
-                // Service changes to team A
+                // Service changes to team A (receiving team won)
                 serviceA = true;
                 if (isSingles) {
                     currentServer = players[0];
                 } else {
-                    currentServer = teamA[0];
+                    // In doubles, when serving team loses, they rotate
+                    serverIndexB = (serverIndexB == 0) ? 1 : 0;
+                    // Receiving team that won becomes serving team
+                    currentServer = teamA[serverIndexA];
                 }
             }
+            // If Team A was already serving and scores, they continue (no rotation)
+            
         } else {
-            currentSetB ++; // Increment by 1 point
+            currentSetB++; // Increment by 1 point
             cout << "\n1 Point to ";
             if (isSingles) {
                 cout << players[1];
@@ -193,16 +260,20 @@ public:
             }
             cout << "!" << endl;
             
-            // Service continues if serving side scores
+            // Service handling
             if (serviceA) {
-                // Service changes to team B
+                // Service changes to team B (receiving team won)
                 serviceA = false;
                 if (isSingles) {
                     currentServer = players[1];
                 } else {
-                    currentServer = teamB[0];
+                    // In doubles, when serving team loses, they rotate
+                    serverIndexA = (serverIndexA == 0) ? 1 : 0;
+                    // Receiving team that won becomes serving team
+                    currentServer = teamB[serverIndexB];
                 }
             }
+            // If Team B was already serving and scores, they continue (no rotation)
         }
         
         updateServer();
@@ -261,6 +332,10 @@ public:
             currentSetA = 0;
             currentSetB = 0;
             currentSet++;
+            
+            // Reset server indices for doubles
+            serverIndexA = 0;
+            serverIndexB = 0;
             
             // Check match winner
             checkMatchWin();
@@ -383,6 +458,7 @@ public:
             }
         }
     }
+    
     bool askPlayAgain() {
         char choice;
         try {
@@ -417,6 +493,8 @@ public:
         setsWonB = 0;
         currentSet = 1;
         serviceA = true;
+        serverIndexA = 0;
+        serverIndexB = 0;
         
         // Reset set scores
         set1ScoreA = 0; set1ScoreB = 0;
@@ -453,10 +531,14 @@ int main() {
         }
         catch (const exception& e) {
             cout << "An unexpected error occurred: " << e.what() << endl;
-            cout << "Restarting program....." << endl;
+            cout << "Restarting program..." << endl;
         }
     }
     
-    cout << "\nThank you for playing!" << endl;
+    cout << "\n\n======================================================================\n";
+    cout << "                        THANK YOU FOR PLAYING!                          \n";
+    cout << "                      Badminton Scoring Program                         \n";
+    cout << "                          Group 2 - CSS121P                              \n";
+    cout << "======================================================================\n\n";
     return 0;
 }
